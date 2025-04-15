@@ -1,93 +1,99 @@
 # 🛠️ Self-Hosted GitLab Setup on AWS (Red Hat + 2GB RAM + 16GB Disk)
 
-## 🧱 Infrastructure Setup (AWS)
+To set up a self-hosted GitLab instance on AWS using Red Hat Enterprise Linux 8 (RHEL 8), follow these steps:
 
-- **OS**: Red Hat Enterprise Linux 8 (RHEL 8)
-- **Instance Type**: t3.small / t2.small (2 GB RAM)
-- **Storage**: 16 GB (gp2/gp3)
-- **Security Group**: Open ports 22, 80, 443
-- **Elastic IP**: Yes (for static public access)
+1. **Infrastructure Setup (AWS)**:
+   - **OS**: Red Hat Enterprise Linux 8 (RHEL 8)
+   - **Instance Type**: t3.small / t2.small (2 GB RAM)
+   - **Storage**: 16 GB (gp2/gp3)
+   - **Security Group**: Open ports 22, 80, 443
+   - **Elastic IP**: Yes (for static public access)
 
----
+2. **Connect via SSH**:
+   - Use the following command to connect to your EC2 instance:
+   
+     ```bash
+     ssh -i your-key.pem ec2-user@<your-public-ip>
+     ```
 
-## 🔐 Connect via SSH
+3. **Install Prerequisites**:
+   - Update your system and install the necessary packages:
 
-```bash
-ssh -i your-key.pem ec2-user@<your-public-ip>
----
+     ```bash
+     sudo yum update -y
+     sudo yum install -y curl policycoreutils openssh-server perl firewalld postfix
+     sudo systemctl enable firewalld postfix
+     sudo systemctl start firewalld postfix
+     ```
 
--------------------------------------------------------------------------
-## ⚙️ Install Prerequisites
+4. **Add GitLab Repository & Install GitLab CE**:
+   - Add the GitLab repository and install GitLab Community Edition (CE):
 
-sudo yum update -y
-sudo yum install -y curl policycoreutils openssh-server perl firewalld postfix
-sudo systemctl enable firewalld postfix
-sudo systemctl start firewalld postfix
+     ```bash
+     curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rpm.sh | sudo bash
+     sudo EXTERNAL_URL="http://<your-public-ip>" yum install -y gitlab-ce
+     ```
 
+5. **Configure GitLab**:
+   - Run the following command to configure GitLab:
 
-🐙 Add GitLab Repository & Install GitLab CE
-curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rpm.sh | sudo bash
-sudo EXTERNAL_URL="http://<your-public-ip>" yum install -y gitlab-ce
+     ```bash
+     sudo gitlab-ctl reconfigure
+     ```
 
-🔁 Configure GitLab
-bash
-Copy
-Edit
-sudo gitlab-ctl reconfigure
-Access it via: http://<your-ec2-public-ip>
+   - Once configured, you can access GitLab at [http://<your-ec2-public-ip>](http://<your-ec2-public-ip>).
 
-🧠 Optimize for 2GB RAM
-Add Swap Memory
-bash
-Copy
-Edit
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
-Disable Prometheus to save RAM
-bash
-Copy
-Edit
-sudo nano /etc/gitlab/gitlab.rb
+6. **Optimize for 2GB RAM**:
+   - To optimize performance, add swap memory and disable Prometheus monitoring:
 
-# Add:
-prometheus_monitoring['enable'] = false
-Then:
+     **Add Swap Memory**:
+     ```bash
+     sudo fallocate -l 2G /swapfile
+     sudo chmod 600 /swapfile
+     sudo mkswap /swapfile
+     sudo swapon /swapfile
+     echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+     ```
 
-bash
-Copy
-Edit
-sudo gitlab-ctl reconfigure
-🔥 Open Firewall Ports (Optional)
-bash
-Copy
-Edit
-sudo firewall-cmd --permanent --add-service=http
-sudo firewall-cmd --permanent --add-service=https
-sudo firewall-cmd --permanent --add-service=ssh
-sudo firewall-cmd --reload
-🧪 Login & First-Time Setup
-Visit: http://<your-ec2-public-ip>
+     **Disable Prometheus to Save RAM**:
+     - Edit the GitLab configuration file to disable Prometheus:
 
-Set root password
+       ```bash
+       sudo nano /etc/gitlab/gitlab.rb
+       ```
 
-Login with:
+     - Add the following line:
 
-Username: root
+       ```bash
+       prometheus_monitoring['enable'] = false
+       ```
 
-Password: your newly set password
+     - Then reconfigure GitLab:
 
-📚 Official GitLab References
-📘 Install GitLab CE
+       ```bash
+       sudo gitlab-ctl reconfigure
+       ```
 
-📘 RHEL / CentOS Install Guide
+7. **Open Firewall Ports (Optional)**:
+   - If you need to open firewall ports for HTTP, HTTPS, and SSH access, run the following commands:
 
-📘 System Requirements
+     ```bash
+     sudo firewall-cmd --permanent --add-service=http
+     sudo firewall-cmd --permanent --add-service=https
+     sudo firewall-cmd --permanent --add-service=ssh
+     sudo firewall-cmd --reload
+     ```
 
-📘 GitLab Config File (gitlab.rb)
+8. **Login & First-Time Setup**:
+   - After GitLab is running, visit [http://<your-ec2-public-ip>](http://<your-ec2-public-ip>) to set the root password. You can then log in using:
+     - **Username**: root
+     - **Password**: the password you just set
 
-📘 Backup & Restore GitLab
-
-📘 GitLab on AWS
+9. **Official GitLab References**:
+   - For additional details and references, you can refer to the following GitLab documentation:
+     - [Install GitLab CE](https://about.gitlab.com/install/)
+     - [RHEL / CentOS Install Guide](https://about.gitlab.com/install/#rhelcentos)
+     - [System Requirements](https://about.gitlab.com/install/#requirements)
+     - [GitLab Config File (`gitlab.rb`)](https://docs.gitlab.com/omnibus/settings/configuration.html)
+     - [Backup & Restore GitLab](https://docs.gitlab.com/ee/raketasks/backup_restore.html)
+     - [GitLab on AWS](https://docs.gitlab.com/ee/administration/hosts_aws.html)
